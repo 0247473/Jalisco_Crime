@@ -1,0 +1,103 @@
+# ============================================
+# Ingress - HTTP Routing (Optional)
+# Routes external traffic to frontend and backend services
+# Requires: minikube addons enable ingress
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: crime-ingress
+  labels:
+    app: crime-dashboard
+  annotations:
+    # Nginx ingress controller annotations
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+    
+    # CORS support for API calls
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    
+    # Rate limiting (optional)
+    # nginx.ingress.kubernetes.io/limit-rps: "100"
+    
+    # Connection limits
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    
+    description: "Routes /api to backend, / to frontend"
+spec:
+  # Ingress class (if multiple ingress controllers exist)
+  ingressClassName: nginx
+  
+  rules:
+  # Rule 1: Route traffic for crime.local domain
+  - host: crime.local
+    http:
+      paths:
+      # API routes go to backend
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: crime-backend-svc
+            port:
+              number: 8000
+      
+      # Health check route to backend
+      - path: /health
+        pathType: Exact
+        backend:
+          service:
+            name: crime-backend-svc
+            port:
+              number: 8000
+      
+      # All other routes go to frontend
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: crime-frontend-svc
+            port:
+              number: 80
+  
+  # Optional: Default rule without host (for IP-based access)
+  - http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: crime-backend-svc
+            port:
+              number: 8000
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: crime-frontend-svc
+            port:
+              number: 80
+
+---
+# Optional: TLS configuration (for HTTPS)
+# Uncomment and configure if using TLS certificates
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: crime-tls-secret
+# type: kubernetes.io/tls
+# data:
+#   tls.crt: <base64-encoded-cert>
+#   tls.key: <base64-encoded-key>
+# ---
+# Add to Ingress spec:
+# spec:
+#   tls:
+#   - hosts:
+#     - crime.local
+#     secretName: crime-tls-secret

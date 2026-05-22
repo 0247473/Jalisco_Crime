@@ -1,0 +1,98 @@
+# ============================================
+# Network Policy - Restrict pod-to-pod communication
+# Only allows necessary traffic between frontend and backend
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-network-policy
+  namespace: crime-dashboard
+spec:
+  podSelector:
+    matchLabels:
+      app: crime-backend
+  
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  # Ingress: Who can connect TO backend
+  ingress:
+  # Allow from frontend pods
+  - from:
+    - podSelector:
+        matchLabels:
+          app: crime-frontend
+    ports:
+    - protocol: TCP
+      port: 8000
+  
+  # Allow from any pod in namespace (for kubectl port-forward)
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: crime-dashboard
+    ports:
+    - protocol: TCP
+      port: 8000
+  
+  # Egress: Where backend can connect TO
+  egress:
+  # Allow DNS queries
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53
+  
+  # Allow outbound to internet (for future API calls)
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+
+---
+# ============================================
+# Network Policy for Frontend
+# ============================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: frontend-network-policy
+  namespace: crime-dashboard
+spec:
+  podSelector:
+    matchLabels:
+      app: crime-frontend
+  
+  policyTypes:
+  - Ingress
+  - Egress
+  
+  # Ingress: Who can connect TO frontend
+  ingress:
+  # Allow from anywhere (public-facing)
+  - {}
+  
+  # Egress: Where frontend can connect TO
+  egress:
+  # Allow to backend
+  - to:
+    - podSelector:
+        matchLabels:
+          app: crime-backend
+    ports:
+    - protocol: TCP
+      port: 8000
+  
+  # Allow DNS
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: UDP
+      port: 53

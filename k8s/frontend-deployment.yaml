@@ -1,0 +1,149 @@
+# ============================================
+# Frontend Deployment & Service
+# Nginx serving static SPA with Leaflet & Chart.js
+# ============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crime-frontend
+  labels:
+    app: crime-frontend
+    component: web
+    tier: frontend
+  annotations:
+    description: "Nginx frontend serving interactive crime dashboard"
+spec:
+  # Maintain 2 replicas for high availability
+  replicas: 2
+  
+  # Rolling update strategy
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  
+  selector:
+    matchLabels:
+      app: crime-frontend
+  
+  template:
+    metadata:
+      labels:
+        app: crime-frontend
+        component: web
+        tier: frontend
+      annotations:
+        prometheus.io/scrape: "false"  # Static content, no metrics needed
+    
+    spec:
+      # Security: Run as non-root user
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      
+      containers:
+      - name: frontend
+        image: crime-frontend:latest
+        imagePullPolicy: Never  # Use local Minikube image
+        
+        ports:
+        - name: http
+          containerPort: 80
+          protocol: TCP
+        
+        # Resource requests and limits
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "200m"  # Increased for bursts
+        
+        # Liveness probe
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 20
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Readiness probe
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true  # Nginx can run with read-only root
+          runAsNonRoot: true
+          runAsUser: 1001
+          capabilities:
+            drop:
+            - ALL
+        
+        # Volume mounts for nginx temp directories
+        volumeMounts:
+        - name: cache
+          mountPath: /var/cache/nginx
+        - name: run
+          mountPath: /var/run
+      
+      # Volumes for nginx temp files
+      volumes:
+      - name: cache
+        emptyDir: {}
+      - name: run
+        emptyDir: {}
+      
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+
+---
+# ============================================
+# Frontend Service - NodePort
+# Exposes frontend to external traffic via Minikube
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: crime-frontend-svc
+  labels:
+    app: crime-frontend
+    component: web
+    tier: frontend
+  annotations:
+    description: "External-facing service for frontend dashboard"
+spec:
+  type: NodePort  # Expose via Minikube node port
+  
+  selector:
+    app: crime-frontend
+  
+  ports:
+  - name: http
+    protocol: TCP
+    port: 80          # Service port
+    targetPort: 80    # Container port
+    nodePort: 30080   # Fixed external port (optional, can be auto-assigned)
+  
+  # Session affinity to send same user to same pod
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800  # 3 hours

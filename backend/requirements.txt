@@ -1,0 +1,21 @@
+# Core Framework
+fastapi==0.111.0
+uvicorn==0.30.1
+
+# ASGI server with better performance
+uvicorn[standard]==0.30.1
+
+# HTTP client for health checks
+httpx==0.27.0
+
+# Validation and serialization
+pydantic==2.7.3
+
+# CORS support (already included in FastAPI, but explicit for clarity)
+# starlette is the dependency that provides CORS
+
+# Optional: Monitoring and performance
+# prometheus-fastapi-instrumentator==7.0.0
+
+# Optional: Production server
+# gunicorn==22.0.0

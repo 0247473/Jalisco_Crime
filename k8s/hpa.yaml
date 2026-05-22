@@ -1,0 +1,87 @@
+# ============================================
+# Horizontal Pod Autoscaler for Backend
+# Automatically scales backend pods based on CPU usage
+# ============================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: crime-backend-hpa
+  labels:
+    app: crime-backend
+  annotations:
+    description: "Auto-scales backend from 2 to 6 pods based on 60% CPU"
+spec:
+  # Target deployment to scale
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: crime-backend
+  
+  # Replica bounds
+  minReplicas: 2  # Always maintain at least 2 for HA
+  maxReplicas: 6  # Scale up to 6 under heavy load
+  
+  # Scaling metrics
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 60  # Scale when avg CPU > 60%
+  
+  # Optional: Memory-based scaling (uncomment to enable)
+  # - type: Resource
+  #   resource:
+  #     name: memory
+  #     target:
+  #       type: Utilization
+  #       averageUtilization: 80
+  
+  # Scaling behavior (fine-tune how fast to scale)
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300  # Wait 5 min before scaling down
+      policies:
+      - type: Percent
+        value: 50  # Remove max 50% of pods at once
+        periodSeconds: 60
+      - type: Pods
+        value: 1   # Remove max 1 pod per minute
+        periodSeconds: 60
+      selectPolicy: Min  # Use the most conservative policy
+    
+    scaleUp:
+      stabilizationWindowSeconds: 0  # Scale up immediately
+      policies:
+      - type: Percent
+        value: 100  # Double pods at once
+        periodSeconds: 60
+      - type: Pods
+        value: 2    # Add max 2 pods per minute
+        periodSeconds: 60
+      selectPolicy: Max  # Use the most aggressive policy
+
+---
+# ============================================
+# Optional: Frontend HPA (if frontend becomes CPU-intensive)
+# Currently commented out - frontend is lightweight
+# ============================================
+# apiVersion: autoscaling/v2
+# kind: HorizontalPodAutoscaler
+# metadata:
+#   name: crime-frontend-hpa
+# spec:
+#   scaleTargetRef:
+#     apiVersion: apps/v1
+#     kind: Deployment
+#     name: crime-frontend
+#   minReplicas: 2
+#   maxReplicas: 4
+#   metrics:
+#   - type: Resource
+#     resource:
+#       name: cpu
+#       target:
+#         type: Utilization
+#         averageUtilization: 70

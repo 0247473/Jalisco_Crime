@@ -1,0 +1,185 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Dashboard interactivo de criminalidad en Jalisco 2020-2025">
+    <title> Jalisco Crime Dashboard - Kubernetes Demo</title>
+    
+    <!-- Leaflet CSS for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin=""/>
+    
+    <!-- Chart.js for graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <h1 class="title">
+                    <span class="icon"></span>
+                    Jalisco Crime Dashboard
+                </h1>
+                <div class="subtitle">
+                    Dashboard interactivo de criminalidad en Jalisco (2020-2025)  
+                    <strong>Kubernetes Demo Project</strong>
+                </div>
+            </div>
+            <div class="status-indicator" id="statusIndicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span class="status-text" id="statusText">Conectando...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container">
+        
+        <!-- Summary Cards -->
+        <section class="cards-grid">
+            <div class="card">
+                <div class="card-icon"></div>
+                <div class="card-label">Total de registros</div>
+                <div class="card-value" id="totalRecords"></div>
+                <div class="card-detail">2020  2025</div>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon"></div>
+                <div class="card-label">Delito ms frecuente</div>
+                <div class="card-value" id="topDelito"></div>
+                <div class="card-detail" id="topDelitoCount"></div>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon"></div>
+                <div class="card-label">Municipio ms afectado</div>
+                <div class="card-value" id="topMunicipio"></div>
+                <div class="card-detail" id="topMunicipioCount"></div>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon"></div>
+                <div class="card-label">Tendencia 20202025</div>
+                <div class="card-value" id="trendValue"></div>
+                <div class="card-detail">variacin acumulada</div>
+            </div>
+        </section>
+
+        <!-- Filters -->
+        <section class="filters-section">
+            <h2 class="section-title"> Filtros</h2>
+            <div class="filters-grid">
+                <div class="filter-group">
+                    <label for="delitoFilter" class="filter-label">Filtrar por delito:</label>
+                    <select id="delitoFilter" class="filter-select">
+                        <option value="">Todos los delitos</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label for="municipioFilter" class="filter-label">Filtrar por municipio:</label>
+                    <select id="municipioFilter" class="filter-select">
+                        <option value="">Todos los municipios</option>
+                    </select>
+                </div>
+                
+                <div class="filter-actions">
+                    <button id="applyFilters" class="btn btn-primary">Aplicar filtros</button>
+                    <button id="resetFilters" class="btn btn-secondary">Limpiar</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Map Section -->
+        <section class="map-section">
+            <h2 class="section-title"> Mapa de puntos  ubicacin de eventos en Jalisco</h2>
+            <div class="map-container">
+                <div id="map" class="map"></div>
+                <div class="map-legend">
+                    <div class="legend-item">
+                        <span class="legend-dot"></span>
+                        <span>Eventos criminales</span>
+                    </div>
+                    <div class="legend-info" id="mapInfo">
+                        Mostrando: <strong id="pointsShown">0</strong> puntos
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Charts Section -->
+        <section class="charts-section">
+            <div class="chart-container">
+                <h2 class="section-title"> Tendencia anual de crmenes</h2>
+                <canvas id="trendChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="section-title"> Top 10 municipios</h2>
+                <canvas id="municipioChart"></canvas>
+            </div>
+            
+            <div class="chart-container">
+                <h2 class="section-title"> Top 10 tipos de delito</h2>
+                <canvas id="delitoChart"></canvas>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3> Proyecto Acadmico</h3>
+                    <p>Materia: Aprendizaje Automtico para Grandes Volmenes de Datos</p>
+                    <p>Dataset: Incidencia delictiva en Jalisco 2020-2025 (357,164 registros)</p>
+                </div>
+                <div class="footer-section">
+                    <h3> Stack Tecnolgico</h3>
+                    <p><strong>Frontend:</strong> HTML5, CSS3, JavaScript, Leaflet, Chart.js, Nginx</p>
+                    <p><strong>Backend:</strong> FastAPI, Python, Uvicorn</p>
+                    <p><strong>Infraestructura:</strong> Docker, Kubernetes (Minikube), HPA</p>
+                </div>
+                <div class="footer-section">
+                    <h3> Conceptos Kubernetes</h3>
+                    <p> Pods  Deployments  Services  HPA  Self-healing  Scaling</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Jalisco Crime Dashboard | Kubernetes Demo Project</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <p>Cargando datos...</p>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="modal">
+        <div class="modal-content">
+            <h3> Error de Conexin</h3>
+            <p id="errorMessage">No se pudo conectar con el backend.</p>
+            <button id="retryBtn" class="btn btn-primary">Reintentar</button>
+        </div>
+    </div>
+
+    <!-- Custom JavaScript -->
+    <script src="app.js"></script>
+</body>
+</html>

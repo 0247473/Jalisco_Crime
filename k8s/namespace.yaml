@@ -1,0 +1,58 @@
+# ============================================
+# Namespace for Crime Dashboard
+# Isolates resources from other applications
+# ============================================
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: crime-dashboard
+  labels:
+    name: crime-dashboard
+    environment: development
+    project: jalisco-crime
+  annotations:
+    description: "Namespace for Jalisco Crime Dashboard project"
+
+---
+# ============================================
+# Resource Quota - Limit resource usage
+# ============================================
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: crime-quota
+  namespace: crime-dashboard
+spec:
+  hard:
+    requests.cpu: "2"        # Max 2 CPU cores requested
+    requests.memory: "2Gi"   # Max 2GB memory requested
+    limits.cpu: "4"          # Max 4 CPU cores limit
+    limits.memory: "4Gi"     # Max 4GB memory limit
+    pods: "20"               # Max 20 pods in namespace
+    services: "10"           # Max 10 services
+    configmaps: "10"         # Max 10 configmaps
+
+---
+# ============================================
+# Limit Range - Default resource limits per pod
+# ============================================
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: crime-limits
+  namespace: crime-dashboard
+spec:
+  limits:
+  - max:
+      cpu: "1"
+      memory: "1Gi"
+    min:
+      cpu: "50m"
+      memory: "32Mi"
+    default:
+      cpu: "200m"
+      memory: "256Mi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+    type: Container

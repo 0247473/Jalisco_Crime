@@ -1,0 +1,158 @@
+# ============================================
+# Backend Deployment & Service
+# FastAPI service with crime data API
+# ============================================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crime-backend
+  labels:
+    app: crime-backend
+    component: api
+    tier: backend
+  annotations:
+    description: "FastAPI backend serving crime statistics API"
+spec:
+  # Maintain 2 replicas for high availability
+  replicas: 2
+  
+  # Rolling update strategy - zero downtime deployments
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1        # Max 1 extra pod during update
+      maxUnavailable: 0  # Always keep at least 2 pods running
+  
+  selector:
+    matchLabels:
+      app: crime-backend
+  
+  template:
+    metadata:
+      labels:
+        app: crime-backend
+        component: api
+        tier: backend
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/health"
+    
+    spec:
+      # Security: Run as non-root user (Letting Dockerfile handle the specific UID)
+      securityContext:
+        runAsNonRoot: true
+      
+      containers:
+      - name: backend
+        image: crime-backend:latest
+        imagePullPolicy: Never  # Use local Minikube image
+        
+        ports:
+        - name: http
+          containerPort: 8000
+          protocol: TCP
+        
+        # Environment variables
+        env:
+        - name: DATA_PATH
+          value: "/app/data/crime_data.json"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: WORKERS
+          value: "2"
+        
+        # Resource requests and limits
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"   # Increased from 256Mi for safety
+            cpu: "500m"       # Increased from 300m for HPA
+        
+        # Liveness probe - restart if unhealthy
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Readiness probe - remove from service if not ready
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        
+        # Startup probe - wait for slow startup
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 0
+          periodSeconds: 5
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 12  # 60 seconds max startup time
+        
+        # Security context for container
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          runAsNonRoot: true
+          capabilities:
+            drop:
+            - ALL
+      
+      # Restart policy
+      restartPolicy: Always
+      
+      # Termination grace period
+      terminationGracePeriodSeconds: 30
+      
+      # DNS policy
+      dnsPolicy: ClusterFirst
+
+---
+# ============================================
+# Backend Service - Internal ClusterIP
+# Provides stable internal endpoint for backend pods
+# ============================================
+apiVersion: v1
+kind: Service
+metadata:
+  name: crime-backend-svc
+  labels:
+    app: crime-backend
+    component: api
+    tier: backend
+  annotations:
+    description: "Internal service for backend API"
+spec:
+  type: ClusterIP  # Internal only, not exposed outside cluster
+  
+  # Session affinity for sticky sessions (optional)
+  sessionAffinity: None
+  
+  selector:
+    app: crime-backend
+  
+  ports:
+  - name: http
+    protocol: TCP
+    port: 8000        # Service port
+    targetPort: 8000  # Container port
+  
+  # Enable internal traffic policy for better performance
+  internalTrafficPolicy: Cluster

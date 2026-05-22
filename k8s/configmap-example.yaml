@@ -1,0 +1,77 @@
+# ============================================
+# ConfigMap for Crime Data
+# Stores the crime_data.json file
+# NOTE: ConfigMaps are limited to 1MB - if your data is larger,
+# use PersistentVolume or external storage instead
+# ============================================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crime-data
+  labels:
+    app: crime-backend
+  annotations:
+    description: "Crime statistics data for Jalisco 2020-2025"
+data:
+  # Option 1: Embed JSON directly (for small files < 1MB)
+  crime_data.json: |
+    {
+      "total_records": 357164,
+      "by_year": {
+        "2020": 71000,
+        "2021": 72000,
+        "2022": 70000,
+        "2023": 69000,
+        "2024": 37500,
+        "2025": 37664
+      },
+      "top_delitos": [
+        {"delito": "Robo", "count": 85000},
+        {"delito": "Lesiones", "count": 50000},
+        {"delito": "Violencia familiar", "count": 45000}
+      ],
+      "by_municipio": {
+        "Guadalajara": 120000,
+        "Zapopan": 80000,
+        "Tlaquepaque": 35000,
+        "Tonalá": 30000,
+        "Tlajomulco": 25000
+      },
+      "sample": [
+        {"lat": 20.6737, "lng": -103.3444, "delito": "Robo", "municipio": "Guadalajara"},
+        {"lat": 20.7214, "lng": -103.3918, "delito": "Lesiones", "municipio": "Zapopan"}
+      ],
+      "pivot": [],
+      "delitos_list": ["Robo", "Lesiones", "Violencia familiar", "Homicidio"],
+      "municipios_list": ["Guadalajara", "Zapopan", "Tlaquepaque", "Tonalá"]
+    }
+
+---
+# ============================================
+# Alternative: Create ConfigMap from file
+# ============================================
+# If your crime_data.json is too large for ConfigMap (>1MB),
+# use this approach instead:
+#
+# 1. Create ConfigMap from file:
+#    kubectl create configmap crime-data --from-file=crime_data.json=./data/crime_data.json
+#
+# 2. Or use PersistentVolume for large datasets:
+#
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: crime-data-pvc
+# spec:
+#   accessModes:
+#   - ReadOnlyMany
+#   resources:
+#     requests:
+#       storage: 100Mi
+#   storageClassName: standard
+#
+# Then mount in deployment:
+# volumes:
+# - name: data-volume
+#   persistentVolumeClaim:
+#     claimName: crime-data-pvc
